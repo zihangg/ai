@@ -1,0 +1,5 @@
+# Sync state — local install manifest, regenerated on every `deno task sync`
+/.sync/
+
+# Editor / OS noise
+.DS_Store
