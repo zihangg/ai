@@ -465,7 +465,7 @@ async function main(): Promise<void> {
 
   if (flags.help) {
     console.log(
-      `agents — install AI agents, skills, and commands across providers.
+      `ai — install AI agents, skills, and commands across providers.
 
 Usage: deno task start            # interactive menu
        deno task new              # scaffold a new agent / skill / command
