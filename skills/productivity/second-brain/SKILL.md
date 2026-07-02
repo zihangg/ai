@@ -25,9 +25,10 @@ Never write a hardcoded path: the vault syncs across the user's devices via
 iCloud but its absolute path differs per machine. The second brain is then at
 `<root>/04 - Knowledge/`.
 
-- Exit 5 (uninitialized): it lists candidate vaults. Confirm which vault, then
-  run `scripts/init-vault.sh "<VaultName>"` to scaffold `04 - Knowledge/` and
-  the ingest template.
+- Exit 5 (uninitialized): it lists candidate vault paths. Confirm which vault,
+  then run `scripts/init-vault.sh "<full-vault-path>"` (the full path from the
+  list, since iCloud may nest the vault under `Documents/`) to scaffold
+  `04 - Knowledge/` and the ingest template.
 - Exit 4 (ambiguous): more than one initialized vault; ask which, then re-run
   with `SECOND_BRAIN_VAULT` set to that path.
 - Exit 3 (base missing): the terminal lacks Full Disk Access to iCloud — tell

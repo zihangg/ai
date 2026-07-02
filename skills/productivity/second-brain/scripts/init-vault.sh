@@ -5,16 +5,18 @@
 # marker at the vault root that makes the vault self-identifying on every device.
 # Idempotent — safe to re-run.
 #
-# Usage: init-vault.sh <VaultName>   (folder name under the iCloud base)
+# Usage: init-vault.sh <vault-path>
+#   <vault-path> is the FULL path to the vault root (a dir containing .obsidian),
+#   as printed by resolve-vault.sh's candidate list — not just the folder name,
+#   since iCloud may nest the vault under a Documents/ container.
 set -eu
 
-BASE="${SECOND_BRAIN_BASE:-$HOME/Library/Mobile Documents/iCloud~md~obsidian}"
 KNOWLEDGE="${SECOND_BRAIN_FOLDER:-04 - Knowledge}"
 TEMPLATES="${SECOND_BRAIN_TEMPLATES:-99 - Templates}"
-name="${1:?usage: init-vault.sh <VaultName>}"
-vault="$BASE/$name"
+vault="${1:?usage: init-vault.sh <vault-path>}"
 
-[ -d "$vault" ] || { echo "No such vault: $vault" >&2; exit 1; }
+[ -d "$vault" ] || { echo "No such directory: $vault" >&2; exit 1; }
+[ -d "$vault/.obsidian" ] || echo "WARNING: $vault has no .obsidian/ — is this really a vault root?" >&2
 
 mkdir -p "$vault/$KNOWLEDGE/raw" "$vault/$KNOWLEDGE/wiki"
 : > "$vault/.second-brain" 2>/dev/null || touch "$vault/.second-brain"
