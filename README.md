@@ -136,6 +136,14 @@ without `--yes`, the installer exits with guidance instead of hanging.
 - Provider directory conventions can change upstream; the adapters are small and
   meant to be edited.
 
+## Acknowledgements
+
+We stand on the shoulders of giants. Several skills here were taken from, or
+inspired by, the work of others, with thanks to:
+
+- **Addy Osmani** - [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
+- **Matt Pocock** - [mattpocock/skills](https://github.com/mattpocock/skills)
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
