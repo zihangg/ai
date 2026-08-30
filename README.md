@@ -143,6 +143,7 @@ inspired by, the work of others, with thanks to:
 
 - **Addy Osmani** - [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
 - **Matt Pocock** - [mattpocock/skills](https://github.com/mattpocock/skills)
+- **HumanLayer** - [humanlayer/skills](https://github.com/humanlayer/skills)
 
 ## License
 
