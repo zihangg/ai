@@ -57,6 +57,11 @@ Each brief carries: the scope, the base branch, the change's intent in two or
 three sentences, and any contract it must satisfy (ticket acceptance criteria,
 API guarantees, migration constraints).
 
+When the intent is a **bug fix**, say so and describe the failing behavior. Add
+one contract line: _the change must include a regression test that fails without
+the fix and passes with it_. This is the reviewers' cue to check that the fix is
+provable, not just plausible.
+
 **Do not pass your own conclusions.** Handing a reviewer "I think this is fine
 because X" buys you agreement with X. Give them the artifact and the contract.
 
@@ -88,6 +93,13 @@ decision**. Nothing goes to the user before this phase completes.
    the code under review, your judgment on it is compromised: send those
    findings to `review-adjudicator` instead of settling them yourself.
 
+   For a **bug fix**, "does this actually fix it?" is uncertain until a test
+   proves it. If the change ships a regression test, run it at the parent commit
+   and at `HEAD`: failing-then-passing **confirms** the fix; passing at both
+   means the test does not exercise the bug (**confirmed** finding - the test is
+   theatre). This is verification, not authoring - do not write the missing test
+   here; its absence is a finding for Phase C.
+
 3. **Delegate the ones you cannot settle cheaply.** Spawn `review-adjudicator`
    (in parallel, one call per batch) when: you authored the code, the finding
    count is large enough that verifying serially would burn the context you need
@@ -106,6 +118,13 @@ Gate rule:
 - **FAIL** - one or more **confirmed** Critical or Important findings.
 - **PASS** - everything else. Confirmed Minor/Nit, rejected, and uncertain
   findings never block.
+
+**Bug-fix rule.** A change whose intent is a bug fix but which ships **no
+regression test** is a confirmed **Important** finding - it blocks. The one
+exception: a repro is genuinely infeasible (a race, an external system, a manual
+UI path). Then it is **uncertain**, not a blocker, and you must state _why_ a
+test cannot cheaply exist and what would settle it. "It's obvious" is not
+infeasibility.
 
 Rejected and uncertain findings are still reported. They are the cheapest signal
 in the whole run: a finding four reviewers-worth of context got wrong is usually
@@ -160,6 +179,7 @@ user instead, and consider that the change is too big and wants splitting.
 | "It's only a Minor, I'll batch it into blockers." | Inflating severity trains everyone to ignore the gate.                                      |
 | "The finding is wrong, so drop it silently."      | Report it as dismissed. Wrong findings mark unreadable code.                                |
 | "Round four will get it."                         | Three rounds means the change is too big. Split it.                                         |
+| "The fix is obviously right, it needs no test."   | A fix without a failing-first test is unproven. Either write the repro or justify why one can't cheaply exist. |
 
 ## Red flags
 
