@@ -122,12 +122,15 @@ codex:
 
 Sync migrates old, manifest-tracked agent prompts when they still match the
 source. Modified or untracked prompts and same-name commands are preserved.
+Start a fresh Codex session after syncing agents. Ask Codex to use a named role
+(for example, `Use code-reviewer to review this diff`). The Subagents view lists
+active or completed agent sessions, not an inventory of installed role files.
 
 ## MCP servers (Codex)
 
-Edit `mcps.json` at the repository root. It starts empty; no server connections
-are enabled automatically. Each key is a server name, with native Codex MCP
-configuration fields:
+Edit `mcps.json` at the repository root. It includes Playwright and Atlassian
+connection definitions imported from the existing local Claude configuration.
+Each key is a server name, with native Codex MCP configuration fields:
 
 ```json
 {

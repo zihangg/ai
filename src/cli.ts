@@ -148,6 +148,16 @@ async function applySync(
 ): Promise<void> {
   const ctx = makeContext(target, root, dryRun);
   const providers = resolveProviders(providerIds);
+  console.log(c.dim(
+    "Selected: " + [
+      ["skill", "skills"],
+      ["agent", "agents"],
+      ["command", "commands"],
+      ["mcp", "MCP servers"],
+    ].map(([kind, label]) =>
+      `${artifacts.filter((a) => a.kind === kind).length} ${label}`
+    ).join(", "),
+  ));
   const manifest = await readManifest(root);
 
   for (const provider of providers) {
