@@ -6,11 +6,13 @@
     "desync": "deno run --allow-read --allow-write --allow-env src/cli.ts desync",
     "list": "deno run --allow-read --allow-write --allow-env src/cli.ts list",
     "check": "deno check src/cli.ts",
+    "test": "deno test --allow-read --allow-write src/",
     "fmt": "deno fmt",
     "lint": "deno lint"
   },
   "imports": {
     "@cliffy/prompt": "jsr:@cliffy/prompt@1.0.0-rc.8",
+    "@std/toml": "jsr:@std/toml@^1.0.11",
     "@std/yaml": "jsr:@std/yaml@^1.0.5",
     "@std/path": "jsr:@std/path@^1.0.8",
     "@std/fs": "jsr:@std/fs@^1.0.6",

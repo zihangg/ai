@@ -6,6 +6,7 @@ import { loadArtifacts } from "./load.ts";
 import {
   installProvider,
   makeContext,
+  migrateCodexPrompts,
   pruneEmptyDirs,
   removePaths,
 } from "./engine.ts";
@@ -143,16 +144,22 @@ async function applySync(
   providerIds: string[],
   artifacts: Artifact[],
   target: SyncContext["target"],
+  dryRun = false,
 ): Promise<void> {
-  const ctx = makeContext(target, root);
+  const ctx = makeContext(target, root, dryRun);
   const providers = resolveProviders(providerIds);
   const manifest = await readManifest(root);
 
   for (const provider of providers) {
     const written = await installProvider(provider, artifacts, ctx);
+    const migrated = await migrateCodexPrompts(
+      provider,
+      artifacts,
+      ctx,
+      manifest[target]?.[provider.id] ?? [],
+    );
+    recordRemoval(manifest, target, provider.id, migrated);
     recordInstall(manifest, target, provider.id, written);
-    const skillSkips = provider.id === "codex" &&
-      artifacts.some((a) => a.kind === "skill");
     console.log(
       `\n${c.bold(provider.label)} ${c.dim("→ " + provider.baseDir(ctx))}`,
     );
@@ -160,13 +167,28 @@ async function applySync(
       console.log(`  ${c.green("+")} ${relative(provider.baseDir(ctx), p)}`);
     }
     if (!written.length) console.log(c.dim("  (no compatible artifacts)"));
-    if (skillSkips) {
-      console.log(c.dim("  (skills skipped — Codex has no skill support)"));
+    for (const p of migrated) {
+      console.log(
+        `  ${c.dim("- migrated " + relative(provider.baseDir(ctx), p))}`,
+      );
     }
+    if (provider.id !== "codex" && artifacts.some((a) => a.kind === "mcp")) {
+      console.log(
+        c.yellow(
+          "  MCP servers skipped — MCP sync is currently implemented for Codex only",
+        ),
+      );
+    }
+    if (!dryRun) await writeManifest(root, manifest);
   }
 
-  await writeManifest(root, manifest);
-  console.log(`\n${c.green("Sync complete.")}`);
+  console.log(
+    `\n${
+      c.green(
+        dryRun ? "Dry run complete — no files changed." : "Sync complete.",
+      )
+    }`,
+  );
 }
 
 // ── Desync ────────────────────────────────────────────────────────────────────
@@ -244,7 +266,10 @@ async function applyDesync(
 
   for (const [pid, paths] of byProvider) {
     await removePaths(paths, false);
-    await pruneEmptyDirs(paths, [providerBaseDir(pid, ctx)], false);
+    await pruneEmptyDirs(paths, [
+      providerBaseDir(pid, ctx),
+      join(ctx.target === "global" ? ctx.home : ctx.cwd, ".agents", "skills"),
+    ], false);
     recordRemoval(manifest, target, pid, paths);
     console.log(`\n${c.bold(providerLabel(pid))}`);
     for (const p of paths) {
@@ -443,6 +468,7 @@ async function mainMenu(): Promise<void> {
 async function nonInteractiveSync(
   providers: string[],
   target: SyncContext["target"],
+  dryRun = false,
 ): Promise<void> {
   const artifacts = await loadArtifacts(root);
   console.log(
@@ -452,12 +478,12 @@ async function nonInteractiveSync(
       } (${target})`,
     ),
   );
-  await applySync(providers, artifacts, target);
+  await applySync(providers, artifacts, target, dryRun);
 }
 
 async function main(): Promise<void> {
   const flags = parseArgs(Deno.args, {
-    boolean: ["yes", "help"],
+    boolean: ["yes", "help", "dry-run"],
     string: ["providers", "target"],
     alias: { h: "help", y: "yes" },
   });
@@ -478,6 +504,7 @@ Non-interactive (scripting/CI):
 
 Options:
   -y, --yes         Skip prompts; install all artifacts
+  --dry-run        Preview sync without writing (non-interactive)
   --providers=a,b   Providers for --yes (default: config.json)
   --target=...      global | project (default: config.json)
   -h, --help        Show this help`,
@@ -495,11 +522,14 @@ Options:
   }
 
   // Non-interactive path.
-  if (flags.yes && (command === "sync" || command === "menu")) {
+  if (
+    (flags.yes || flags["dry-run"]) &&
+    (command === "sync" || command === "menu")
+  ) {
     const providers = flags.providers
       ? flags.providers.split(",").map((s) => s.trim()).filter(Boolean)
       : config.providers;
-    await nonInteractiveSync(providers, target);
+    await nonInteractiveSync(providers, target, flags["dry-run"]);
     return;
   }
 

@@ -1,7 +1,7 @@
-/** The three kinds of artifact this repo can author and install. */
-export type ArtifactKind = "agent" | "skill" | "command";
+/** Artifact kinds this repository can author and install. */
+export type ArtifactKind = "agent" | "skill" | "command" | "mcp";
 
-/** A single source artifact, parsed from `agents/`, `skills/`, or `commands/`. */
+/** A single source artifact, parsed from markdown directories or `mcps.json`. */
 export interface Artifact {
   kind: ArtifactKind;
   /** Stable identifier — derived from frontmatter `name` or the file/dir name. */
@@ -28,6 +28,8 @@ export interface SyncContext {
   cwd: string;
   /** When true, plan and report but write nothing. */
   dryRun: boolean;
+  /** Optional CODEX_HOME override for global Codex configuration. */
+  codexHome?: string;
 }
 
 /** One file (or directory copy) a provider wants written to disk. */
@@ -38,6 +40,8 @@ export interface PlannedFile {
   contents?: string;
   /** Source directory to recursively copy to `path`. Used for skills with assets. */
   copyDir?: string;
+  /** Merge a named MCP server into a shared TOML config instead of replacing it. */
+  mcp?: { name: string; config: Record<string, unknown> };
 }
 
 /** A provider adapter: knows where and how each artifact kind is installed. */

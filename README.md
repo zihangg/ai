@@ -1,8 +1,8 @@
 # ai
 
-A single source of truth for AI **agents**, **skills**, and **commands**, with
-an interactive installer that adds them to each provider you use (Claude Code,
-Codex CLI, OpenCode) — and removes them again on demand.
+A single source of truth for AI **agents**, **skills**, **commands**, and Codex
+**MCP servers**, with an interactive installer that adds them to each provider
+you use (Claude Code, Codex CLI, OpenCode) — and removes them again on demand.
 
 Author each artifact once as provider-agnostic markdown; pick what goes where
 through a menu.
@@ -28,8 +28,10 @@ The installer is **additive**:
 - **Desync** — pick from what's actually installed (read back from the manifest)
   and remove exactly those files, tidying up empty directories afterward.
 
-Everything installed is recorded in `.sync/manifest.json`, so Desync always
-knows precisely what to remove and never deletes anything it didn't create.
+Installed paths and managed MCP sections are recorded in `.sync/manifest.json`.
+Desync removes selected artifacts and MCP sections while keeping shared Codex
+configuration. Sync overwrites selected artifact files; keep local
+customizations in the source repository.
 
 ```
 ┌─ Sync ──────────────────────────────────────────────┐
@@ -50,7 +52,8 @@ knows precisely what to remove and never deletes anything it didn't create.
 agents/      <name>.md                      one agent per file
 commands/    <name>.md                      one slash-command / prompt per file
 skills/      [<category>/]<name>/SKILL.md   one skill per directory (+ any assets)
-config.json                                 default providers + target (pre-selected in the picker)
+mcps.json                                 named MCP server configurations (Codex only)
+config.json                               default providers + target (pre-selected in the picker)
 src/                              the installer
   cli.ts                          interactive menu (Cliffy prompts)
   engine.ts                       install / remove / prune
@@ -70,7 +73,7 @@ with a `SKILL.md` in `skills/` — the format is below.
 
 ## Source format
 
-Every artifact is markdown with optional YAML frontmatter:
+Agents, commands, and skills use markdown with optional YAML frontmatter:
 
 | Field           | Used by           | Notes                                                                                                                                                                  |
 | --------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -86,11 +89,12 @@ Run `deno task new` to scaffold one with the right fields.
 
 ## Where each artifact lands
 
-| Source  | Claude Code       | Codex CLI                | OpenCode         |
-| ------- | ----------------- | ------------------------ | ---------------- |
-| agent   | `agents/<n>.md`   | `prompts/<n>.md`         | `agent/<n>.md`   |
-| command | `commands/<n>.md` | `prompts/<n>.md`         | `command/<n>.md` |
-| skill   | `skills/<n>/`     | _(unsupported, skipped)_ | `skill/<n>/`     |
+| Source  | Claude Code       | Codex CLI                         | OpenCode         |
+| ------- | ----------------- | --------------------------------- | ---------------- |
+| agent   | `agents/<n>.md`   | `agents/<n>.toml`                 | `agent/<n>.md`   |
+| command | `commands/<n>.md` | `prompts/<n>.md`                  | `command/<n>.md` |
+| skill   | `skills/<n>/`     | `.agents/skills/<n>/` (see below) | `skill/<n>/`     |
+| MCP     | unsupported       | `config.toml` sections            | unsupported      |
 
 Install roots, by target:
 
@@ -99,9 +103,61 @@ Install roots, by target:
 | `global`  | `~/.claude`      | `~/.codex`      | `~/.config/opencode` |
 | `project` | `<repo>/.claude` | `<repo>/.codex` | `<repo>/.opencode`   |
 
+Codex skills use `~/.agents/skills/<name>/` globally and
+`<repo>/.agents/skills/<name>/` for project installs, including supporting
+assets. Global Codex agents, prompts, and configuration honor `CODEX_HOME` when
+set. Commands retain the legacy `prompts/` format; use skills for project-scoped
+Codex workflows.
+
+Codex agents inherit the parent model and tools by default. Generic `model`
+(e.g. `sonnet`) and Claude tool names are not passed to Codex. Use a `codex`
+frontmatter object for native overrides, for example:
+
+```yaml
+codex:
+  model: gpt-5.6
+  model_reasoning_effort: high
+  sandbox_mode: read-only
+```
+
+Sync migrates old, manifest-tracked agent prompts when they still match the
+source. Modified or untracked prompts and same-name commands are preserved.
+
+## MCP servers (Codex)
+
+Edit `mcps.json` at the repository root. It starts empty; no server connections
+are enabled automatically. Each key is a server name, with native Codex MCP
+configuration fields:
+
+```json
+{
+  "docs": {
+    "url": "https://developers.openai.com/mcp"
+  },
+  "local-tools": {
+    "command": "npx",
+    "args": ["-y", "your-mcp-package"],
+    "env_vars": ["API_TOKEN"]
+  }
+}
+```
+
+Each server needs exactly one of `command` or `url`. Prefer environment-variable
+references (`env_vars`, `bearer_token_env_var`) over committing credentials. Use
+`codex mcp login <name>` separately when a server requires OAuth.
+
+Servers appear in the sync picker. Sync adds or updates marked sections in
+`~/.codex/config.toml` (or `<repo>/.codex/config.toml` for a trusted project),
+preserving other settings and comments. An existing unmanaged server with the
+same name causes a conflict error before Codex files are written. Rename the
+source entry or reconcile the existing entry explicitly. Desync removes only the
+selected managed sections; it never deletes `config.toml`. Other providers
+report MCP entries as unsupported.
+
 ## Non-interactive (scripting / CI)
 
 ```bash
+deno task sync --dry-run --providers=codex           # preview without changes
 deno task sync --yes                               # install everything (config defaults)
 deno task sync --yes --providers=claude,codex --target=project
 ```
@@ -119,6 +175,17 @@ without `--yes`, the installer exits with guidance instead of hanging.
   "target": "global"
 }
 ```
+
+## Validation
+
+```bash
+deno task check
+deno task lint
+deno task test
+```
+
+Tests use temporary directories to cover skill assets, native agent settings,
+MCP merging/conflicts/removal, dry runs, and migration of legacy agent prompts.
 
 ## Adding a provider
 
@@ -141,7 +208,8 @@ without `--yes`, the installer exits with guidance instead of hanging.
 We stand on the shoulders of giants. Several skills here were taken from, or
 inspired by, the work of others, with thanks to:
 
-- **Addy Osmani** - [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
+- **Addy Osmani** -
+  [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills)
 - **Matt Pocock** - [mattpocock/skills](https://github.com/mattpocock/skills)
 - **HumanLayer** - [humanlayer/skills](https://github.com/humanlayer/skills)
 

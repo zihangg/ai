@@ -87,10 +87,85 @@ async function loadSkills(dir: string): Promise<Artifact[]> {
 
 /** Load every artifact under the repo's source directories. */
 export async function loadArtifacts(root: string): Promise<Artifact[]> {
-  const [agents, commands, skills] = await Promise.all([
+  const [agents, commands, skills, mcps] = await Promise.all([
     loadFlat(join(root, "agents"), "agent"),
     loadFlat(join(root, "commands"), "command"),
     loadSkills(join(root, "skills")),
+    loadMcps(join(root, "mcps.json")),
   ]);
-  return [...agents, ...commands, ...skills];
+  const artifacts = [...agents, ...commands, ...skills, ...mcps];
+  const seen = new Set<string>();
+  for (const a of artifacts) {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(a.name)) {
+      throw new Error(
+        `Invalid artifact name ${JSON.stringify(a.name)} in ${a.sourcePath}`,
+      );
+    }
+    const key = `${a.kind}:${a.name}`;
+    if (seen.has(key)) throw new Error(`Duplicate artifact ${key}`);
+    seen.add(key);
+  }
+  return artifacts;
+}
+
+/** MCP entries use Codex's native config keys. */
+async function loadMcps(sourcePath: string): Promise<Artifact[]> {
+  let text: string;
+  try {
+    text = await Deno.readTextFile(sourcePath);
+  } catch (err) {
+    if (err instanceof Deno.errors.NotFound) return [];
+    throw err;
+  }
+  const servers: unknown = JSON.parse(text);
+  if (!servers || typeof servers !== "object" || Array.isArray(servers)) {
+    throw new Error(
+      `${sourcePath} must contain an object of named MCP servers`,
+    );
+  }
+  return Object.entries(servers).map(([name, config]) => {
+    if (!config || typeof config !== "object" || Array.isArray(config)) {
+      throw new Error(`Invalid MCP server ${name}`);
+    }
+    const fm = config as Record<string, unknown>;
+    const command = str(fm.command);
+    const url = str(fm.url);
+    if (
+      !!command === !!url || ("command" in fm && !command) ||
+      ("url" in fm && !url)
+    ) {
+      throw new Error(`MCP server ${name} needs exactly one of command or url`);
+    }
+    for (const key of ["args", "env_vars", "enabled_tools", "disabled_tools"]) {
+      if (
+        key in fm &&
+        (!Array.isArray(fm[key]) ||
+          !(fm[key] as unknown[]).every((v) => typeof v === "string"))
+      ) {
+        throw new Error(
+          `MCP server ${name}: ${key} must be an array of strings`,
+        );
+      }
+    }
+    for (const key of ["env", "http_headers", "env_http_headers"]) {
+      const value = fm[key];
+      if (
+        key in fm &&
+        (!value || typeof value !== "object" || Array.isArray(value) ||
+          !Object.values(value).every((v) => typeof v === "string"))
+      ) {
+        throw new Error(
+          `MCP server ${name}: ${key} must be an object of strings`,
+        );
+      }
+    }
+    return {
+      kind: "mcp",
+      name,
+      category: "MCP Servers",
+      frontmatter: fm,
+      body: "",
+      sourcePath,
+    };
+  });
 }
