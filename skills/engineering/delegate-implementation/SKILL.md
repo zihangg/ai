@@ -38,7 +38,8 @@ Read `$ARGUMENTS` for a transport, a model, or extra instructions.
 7. Write one brief per story to a file. It contains the worktree path, the base
    SHA, the story, the files in scope, the acceptance criteria, the proof
    commands, the rules from step 4, the test rules from step 10, and the path
-   for its final report. Pass file paths, not pasted file contents.
+   for its final report. The subagent hands back a commit on the story branch.
+   Pass file paths, not pasted file contents.
 8. Tell the subagent to reply first with its own restatement of the story and
    the files it will touch, and then to wait. Correct any drift from the
    approved plan before it writes code.
@@ -53,12 +54,13 @@ Read `$ARGUMENTS` for a transport, a model, or extra instructions.
     - Restructure the internals and keep every observable result. The test must
       still pass.
 
-    Run the first edit for real, never in the story worktree. Make a scratch
-    copy with `git clone --no-local` at the story commit, edit and test there,
-    then delete the copy. Reject tests whose expected value comes from the code
-    under test, that assert on data the test built itself, that only check an
-    internal call, or that restate a constant without running the code that
-    reads it.
+    Give the first edit to a fresh verifier subagent that did not write the
+    story. It works in a scratch copy made with `git clone --no-local` at the
+    story commit, never in the story worktree. It reports each test's command
+    and result on the broken code, then deletes the copy. Read that output
+    yourself. Reject tests whose expected value comes from the code under test,
+    that assert on data the test built itself, that only check an internal call,
+    or that restate a constant without running the code that reads it.
 11. Check the diff against the rules from step 4.
 12. Run the module's tests and formatter yourself and keep the output.
 13. For a fix round, spawn a fresh subagent with the original brief, every later
