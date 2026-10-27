@@ -53,10 +53,12 @@ Read `$ARGUMENTS` for a transport, a model, or extra instructions.
     - Restructure the internals and keep every observable result. The test must
       still pass.
 
-    Run the first edit for real, then restore the code. Reject tests whose
-    expected value comes from the code under test, that assert on data the test
-    built itself, that only check an internal call, or that restate a constant
-    without running the code that reads it.
+    Run the first edit for real, never in the story worktree. Make a scratch
+    copy with `git clone --no-local` at the story commit, edit and test there,
+    then delete the copy. Reject tests whose expected value comes from the code
+    under test, that assert on data the test built itself, that only check an
+    internal call, or that restate a constant without running the code that
+    reads it.
 11. Check the diff against the rules from step 4.
 12. Run the module's tests and formatter yourself and keep the output.
 13. For a fix round, spawn a fresh subagent with the original brief, every later
