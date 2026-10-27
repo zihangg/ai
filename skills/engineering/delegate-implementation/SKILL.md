@@ -38,8 +38,9 @@ Read `$ARGUMENTS` for a transport, a model, or extra instructions.
 7. Write one brief per story to a file. It contains the worktree path, the base
    SHA, the story, the files in scope, the acceptance criteria, the proof
    commands, the rules from step 4, the test rules from step 10, and the path
-   for its final report. The subagent hands back a commit on the story branch.
-   Pass file paths, not pasted file contents.
+   for its final report. When the story's checks pass, the subagent hands back a
+   commit on the story branch. A blocked story reports its blockers and does not
+   commit failing code. Pass file paths, not pasted file contents.
 8. Tell the subagent to reply first with its own restatement of the story and
    the files it will touch, and then to wait. Correct any drift from the
    approved plan before it writes code.
@@ -48,13 +49,14 @@ Read `$ARGUMENTS` for a transport, a model, or extra instructions.
 
 9. Read the diff yourself. A subagent's summary or "tests pass" claim is not
    evidence.
-10. Judge every new or changed test with two edits:
+10. Judge every new or changed test with two checks:
     - Break the behavior: revert the production change, or make it return a
       wrong value. The test must fail.
-    - Restructure the internals and keep every observable result. The test must
-      still pass.
+    - Read the test without editing code. It must assert only what callers can
+      observe, so a restructure of the internals that keeps every observable
+      result would still pass it.
 
-    Give the first edit to a fresh verifier subagent that did not write the
+    Give the break edit to a fresh verifier subagent that did not write the
     story. It works in a scratch copy made with `git clone --no-local` at the
     story commit, never in the story worktree. It reports each test's command
     and result on the broken code, then deletes the copy. Read that output
@@ -75,8 +77,8 @@ Read `$ARGUMENTS` for a transport, a model, or extra instructions.
 15. Do not push or open a pull request. Leave the branch in its worktree for the
     next round.
 16. Report the worktree path, the branch, and the base SHA. Then give each
-    story's status, the test commands and their results, the two-edit result for
-    each new test, the rules you checked, and open questions.
+    story's status, the test commands and their results, the result of both test
+    checks for each new test, the rules you checked, and open questions.
 
 Stop and ask the user before any change outside the approved plan, any
 destructive action, or any push.
